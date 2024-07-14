@@ -1,0 +1,13 @@
+name: oblt-aws-auth
+description: Grant pipelines access to AWS resources using Workload Identity Federation
+author: https://github.com/elastic
+public: true
+requirements:
+  - curl
+  - bash
+  - buildkite-agent
+configuration:
+  properties:
+    duration:
+      type: number
+  additionalProperties: false
