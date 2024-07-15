@@ -4,6 +4,7 @@ author: https://github.com/elastic
 public: true
 requirements:
   - curl
+  - jq
   - bash
   - buildkite-agent
 configuration:
