@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-if [[ -v BUILDKITE_AWS_AUTH_TMPDIR ]]; then
-  rm -rf "$BUILDKITE_AWS_AUTH_TMPDIR"
-  echo "Removed credentials from $BUILDKITE_AWS_AUTH_TMPDIR"
-fi

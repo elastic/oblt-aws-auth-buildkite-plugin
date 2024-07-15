@@ -8,17 +8,16 @@ aws_role_arn="arn:aws:iam::${aws_account_id}:role/bk-${hash}-role"
 duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
 
 echo "~~~ :buildkite: Requesting OIDC token from Buildkite"
-TMPDIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'oblt-aws-auth-buildkite-plugin')
-buildkite-agent oidc request-token --audience sts.amazonaws.com > "$TMPDIR"/token.txt
+oidc_token=$(buildkite-agent oidc request-token --audience sts.amazonaws.com)
 
 echo "~~~ :aws: Assuming role ${aws_role_arn}"
 response=$(curl \
   -H "Accept: application/json" \
-  "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=$(cat "$TMPDIR"/token.txt)&Version=2011-06-15")
+  "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=${oidc_token}&Version=2011-06-15")
 
 credentials_json_path=".AssumeRoleWithWebIdentityResponse.AssumeRoleWithWebIdentityResult.Credentials"
 AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r "${credentials_json_path}.AccessKeyId")
 AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r "${credentials_json_path}.SecretAccessKey")
 AWS_SESSION_TOKEN=$(echo "$response" | jq -r "${credentials_json_path}.SessionToken")
 
-export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN BUILDKITE_AWS_AUTH_TMPDIR="$TMPDIR"
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
