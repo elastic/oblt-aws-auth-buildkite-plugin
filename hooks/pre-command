@@ -3,6 +3,9 @@
 set -euo pipefail
 
 aws_account_id="${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_AWS_ACCOUNT_ID:-"697149045717"}"
+# The hash is used to ensure that the role name is unique per pipeline
+# The same hash is used to generate the role name in the terraform code in
+# https://github.com/elastic/oblt-infra/blob/main/modules/aws-buildkite-oidc/main.tf#L43
 hash=$(echo -n "$(echo "${BUILDKITE_REPO}" | awk -F'[:.]' '{ printf $3 }')/${BUILDKITE_PIPELINE_SLUG}" | sha256sum | cut -c1-55)
 aws_role_arn="arn:aws:iam::${aws_account_id}:role/bk-${hash}-role"
 duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
