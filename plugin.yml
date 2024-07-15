@@ -3,10 +3,11 @@ description: Grant pipelines access to AWS resources using Workload Identity Fed
 author: https://github.com/elastic
 public: true
 requirements:
-  - curl
-  - jq
   - bash
   - buildkite-agent
+  - curl
+  - jq
+  - sha256sum
 configuration:
   properties:
     duration:
