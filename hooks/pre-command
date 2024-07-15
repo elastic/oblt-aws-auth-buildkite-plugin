@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+aws_account_id="${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_AWS_ACCOUNT_ID:-"697149045717"}"
+# The hash is used to ensure that the role name is unique per pipeline
+# The same hash is used to generate the role name in the terraform code in
+# https://github.com/elastic/oblt-infra/blob/main/modules/aws-buildkite-oidc/main.tf#L43
+hash=$(echo -n "$(echo "${BUILDKITE_REPO}" | awk -F'[:.]' '{ printf $3 }')/${BUILDKITE_PIPELINE_SLUG}" | sha256sum | cut -c1-55)
+aws_role_arn="arn:aws:iam::${aws_account_id}:role/bk-${hash}-role"
+duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
+
+echo "~~~ :buildkite: Requesting OIDC token from Buildkite"
+oidc_token=$(buildkite-agent oidc request-token --audience sts.amazonaws.com)
+
+echo "~~~ :aws: Assuming role ${aws_role_arn}"
+response=$(curl \
+  -H "Accept: application/json" \
+  "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=${oidc_token}&Version=2011-06-15")
+
+credentials_json_path=".AssumeRoleWithWebIdentityResponse.AssumeRoleWithWebIdentityResult.Credentials"
+AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r "${credentials_json_path}.AccessKeyId")
+AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r "${credentials_json_path}.SecretAccessKey")
+AWS_SESSION_TOKEN=$(echo "$response" | jq -r "${credentials_json_path}.SessionToken")
+
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN

@@ -1,1 +1,22 @@
-# oblt-aws-auth-buildkite-plugin
+# Authenticate to AWS from Buildkite
+
+This is an opinionated plugin to authenticate to the observability AWS accounts from Buildkite using an [AWS OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html).
+
+## Properties
+
+| Name             | Description                                    | Required | Default        |
+|------------------|------------------------------------------------|----------|----------------|
+| `aws-account-id` | The AWS account belonging to the assumed role. | `false`  | `697149045717` |
+| `duration`       | The duration of the AWS session in seconds.    | `false`  | `3600`         |
+
+## Usage
+
+```yml
+steps:
+  - command: |
+      aws sts get-caller-identity
+    plugins:
+      - elastic/oblt-aws-auth#v1.0.0:
+          aws-account-id: 697149045717
+          duration: 3600 # seconds
+```
