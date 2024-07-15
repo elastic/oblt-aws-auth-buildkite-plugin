@@ -11,4 +11,6 @@ configuration:
   properties:
     duration:
       type: number
+    aws-account-id:
+      type: number
   additionalProperties: false
