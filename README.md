@@ -16,7 +16,7 @@ steps:
   - command: |
       aws sts get-caller-identity
     plugins:
-      - elastic/oblt-aws-auth#v1.0.0:
+      - elastic/oblt-aws-auth#v0.1.0:
           aws-account-id: 697149045717
           duration: 3600 # seconds
 ```
