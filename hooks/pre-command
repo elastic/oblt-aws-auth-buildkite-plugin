@@ -19,8 +19,15 @@ response=$(curl \
   "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=${oidc_token}&Version=2011-06-15")
 
 credentials_json_path=".AssumeRoleWithWebIdentityResponse.AssumeRoleWithWebIdentityResult.Credentials"
-AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r "${credentials_json_path}.AccessKeyId")
-AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r "${credentials_json_path}.SecretAccessKey")
-AWS_SESSION_TOKEN=$(echo "$response" | jq -r "${credentials_json_path}.SessionToken")
+AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r "${credentials_json_path}.AccessKeyId // \"\"")
+AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r "${credentials_json_path}.SecretAccessKey // \"\"")
+AWS_SESSION_TOKEN=$(echo "$response" | jq -r "${credentials_json_path}.SessionToken // \"\"")
+
+if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
+  echo "^^^ +++"
+  echo "Failed to assume AWS role:"
+  echo "${response}"
+  exit 1
+fi
 
 export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
