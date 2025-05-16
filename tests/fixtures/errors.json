@@ -1,0 +1,1 @@
+{"Error":{"Code":"ValidationError","Message":"The requested DurationSeconds exceeds the MaxSessionDuration set for this role.","Type":"Sender"},"RequestId":"55d19478-82d4-4aaa-8e61-ed931344b6cc"}

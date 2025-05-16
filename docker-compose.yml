@@ -1,0 +1,14 @@
+services:
+  plugin-lint:
+    image: buildkite/plugin-linter:v2.1.0
+    command: ['--id', 'elastic/oblt-aws-auth']
+    volumes:
+      - ".:/plugin:ro"
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ".:/plugin:ro"
+    command: ['bats', 'tests/unit']
