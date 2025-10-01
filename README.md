@@ -1,5 +1,7 @@
 # Authenticate to AWS from Buildkite
 
+[![usages](https://img.shields.io/badge/usages-white?logo=buildkite&logoColor=blue)](https://github.com/search?q=elastic%2Foblt-aws-auth+%28path%3A.buildkite%29&type=code)
+
 This is an opinionated plugin to authenticate to the observability AWS accounts from Buildkite using an [AWS OIDC Provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html).
 
 ## Properties
