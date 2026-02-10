@@ -2,32 +2,80 @@
 
 set -euo pipefail
 
+# Input validation
 aws_account_id="${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_AWS_ACCOUNT_ID:-"697149045717"}"
+if ! [[ "$aws_account_id" =~ ^[0-9]{12}$ ]]; then
+  echo "^^^ +++"
+  echo "Error: Invalid AWS account ID. Must be a 12-digit number."
+  echo "Provided: ${aws_account_id}"
+  exit 1
+fi
+
+duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
+if ! [[ "$duration_seconds" =~ ^[0-9]+$ ]] || [ "$duration_seconds" -le 0 ]; then
+  echo "^^^ +++"
+  echo "Error: Invalid duration. Must be positive."
+  echo "Provided: ${duration_seconds}"
+  exit 1
+fi
+
 # The hash is used to ensure that the role name is unique per pipeline
 # The same hash is used to generate the role name in the terraform code in
 # https://github.com/elastic/oblt-infra/blob/main/modules/aws-buildkite-oidc/main.tf#L43
+# Format: Extract org/repo from BUILDKITE_REPO, combine with pipeline slug, hash to 55 chars
 hash=$(echo -n "$(echo "${BUILDKITE_REPO}" | awk -F'[:.]' '{ printf $3 }')/${BUILDKITE_PIPELINE_SLUG}" | sha256sum | cut -c1-55)
 aws_role_arn="arn:aws:iam::${aws_account_id}:role/bk-${hash}-role"
-duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
 
 echo "~~~ :buildkite: Requesting OIDC token from Buildkite"
 oidc_token=$(buildkite-agent oidc request-token --audience sts.amazonaws.com)
 
-echo "~~~ :aws: Assuming role ${aws_role_arn}"
-response=$(curl \
-  -H "Accept: application/json" \
-  "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=${oidc_token}&Version=2011-06-15")
+# Redact the OIDC token from logs to prevent exposure
+if command -v buildkite-agent &> /dev/null; then
+  buildkite-agent redactor add "$oidc_token" 2>/dev/null || true
+fi
 
+echo "~~~ :aws: Assuming role ${aws_role_arn} for ${duration_seconds}s"
+response=$(curl -sS \
+  -H "Accept: application/json" \
+  "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=${oidc_token}&Version=2011-06-15" 2>&1)
+
+# Extract credentials from AWS response
+# Format: JSON response contains nested structure under AssumeRoleWithWebIdentityResponse
 credentials_json_path=".AssumeRoleWithWebIdentityResponse.AssumeRoleWithWebIdentityResult.Credentials"
 AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r "${credentials_json_path}.AccessKeyId // \"\"")
 AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r "${credentials_json_path}.SecretAccessKey // \"\"")
 AWS_SESSION_TOKEN=$(echo "$response" | jq -r "${credentials_json_path}.SessionToken // \"\"")
 
+# Redact credentials from logs
+if command -v buildkite-agent &> /dev/null; then
+  [ -n "$AWS_ACCESS_KEY_ID" ] && buildkite-agent redactor add "$AWS_ACCESS_KEY_ID" 2>/dev/null || true
+  [ -n "$AWS_SECRET_ACCESS_KEY" ] && buildkite-agent redactor add "$AWS_SECRET_ACCESS_KEY" 2>/dev/null || true
+  [ -n "$AWS_SESSION_TOKEN" ] && buildkite-agent redactor add "$AWS_SESSION_TOKEN" 2>/dev/null || true
+fi
+
 if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
   echo "^^^ +++"
-  echo "Failed to assume AWS role:"
-  echo "${response}"
+  echo "Error: Failed to assume AWS role ${aws_role_arn}"
+  
+  # Extract and display error message without exposing credentials
+  error_code=$(echo "$response" | jq -r '.Error.Code // "Unknown"')
+  error_message=$(echo "$response" | jq -r '.Error.Message // "Unknown error"')
+  
+  if [ "$error_code" != "Unknown" ]; then
+    echo "AWS Error Code: ${error_code}"
+    echo "AWS Error Message: ${error_message}"
+  else
+    echo "Failed to parse AWS response. Check role permissions and OIDC configuration."
+  fi
+  
+  echo ""
+  echo " Troubleshooting:"
+  echo "  - Verify the AWS role exists: ${aws_role_arn}"
+  echo "  - Check OIDC trust policy allows this pipeline"
+  echo "  - Ensure duration (${duration_seconds}s) doesn't exceed role's MaxSessionDuration"
   exit 1
 fi
+
+echo "Successfully authenticated to AWS account ${aws_account_id}"
 
 export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN

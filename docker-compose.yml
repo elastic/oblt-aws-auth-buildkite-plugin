@@ -3,12 +3,19 @@ services:
     image: buildkite/plugin-linter:v2.1.0
     command: ['--id', 'elastic/oblt-aws-auth']
     volumes:
-      - ".:/plugin:ro"
+      - ".:/plugin:ro,z"
 
   test:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ".:/plugin:ro"
+      - ".:/plugin:ro,z"
     command: ['bats', 'tests/unit']
+
+  shellcheck:
+    image: cgr.dev/elastic/shellcheck:latest
+    command: 
+    working_dir: /plugin
+    volumes:
+      - ".:/plugin:ro,z"

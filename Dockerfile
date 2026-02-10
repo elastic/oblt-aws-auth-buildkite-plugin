@@ -1,4 +1,4 @@
-FROM buildkite/plugin-tester:v4.1.1
+FROM buildkite/plugin-tester:v4.3.0
 
 # Create non-root user
 RUN adduser --disabled-password --gecos "" plugin-tester
