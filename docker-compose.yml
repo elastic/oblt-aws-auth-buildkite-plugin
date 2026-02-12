@@ -13,9 +13,30 @@ services:
       - ".:/plugin:ro,z"
     command: ['bats', 'tests/unit']
 
+  integration-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ".:/plugin:ro,z"
+    command: ['bats', 'tests/integration']
+
+  e2e-test:
+    build:
+      context: .
+      dockerfile: Dockerfile-e2e
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+    volumes:
+      - ".:/plugin:ro,z"
+    working_dir: /plugin
+    command: ['.buildkite/scripts/test-e2e.sh']
+
   shellcheck:
     image: cgr.dev/elastic/shellcheck:latest
-    command: 
+    command: ['hooks/pre-command']
     working_dir: /plugin
     volumes:
       - ".:/plugin:ro,z"

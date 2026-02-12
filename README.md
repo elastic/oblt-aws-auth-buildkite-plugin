@@ -29,7 +29,7 @@ The plugin:
 | Name             | Description                                    | Required | Default        | Constraints                    |
 |------------------|------------------------------------------------|----------|----------------|--------------------------------|
 | `aws-account-id` | The AWS account belonging to the assumed role. | `false`  | `697149045717` | Must be a 12-digit number      |
-| `duration`       | The duration of the AWS session in seconds.    | `false`  | `3600`         | Between 900 and 43200 seconds  |
+| `duration`       | The duration of the AWS session in seconds.    | `false`  | `3600`         | Positive. Max is defined in `MaxSessionDuration` role's property  |
 
 ## Usage
 
@@ -68,47 +68,3 @@ steps:
           duration: 43200 # 12 hours
 ```
 
-## Troubleshooting
-
-### Error: "Failed to assume AWS role"
-
-**Causes**:
-- The IAM role doesn't exist
-- The OIDC trust policy doesn't allow your pipeline
-- Network connectivity issues
-
-**Solutions**:
-1. Verify the role exists: `arn:aws:iam::{account-id}:role/bk-{hash}-role`
-2. Check the role's trust policy includes your Buildkite organization
-3. Ensure the role has appropriate permissions
-4. Verify network connectivity to AWS STS
-
-### Error: "Invalid AWS account ID"
-
-**Cause**: The account ID is not a 12-digit number.
-
-**Solution**: Provide a valid AWS account ID (e.g., `123456789012`).
-
-
-## Security Features
-
-This plugin implements several security best practices:
-
-- **No hardcoded secrets**: Uses OIDC token authentication
-- **Automatic secret redaction**: All tokens and credentials are redacted from Buildkite logs
-- **Input validation**: Validates all configuration parameters
-- **Sanitized error messages**: Error output never exposes credentials
-- **Least privilege**: Runs in non-root container
-
-## Development
-
-Run tests:
-```bash
-make test
-```
-
-Run linting:
-```bash
-make plugin-lint
-make shellcheck
-```
