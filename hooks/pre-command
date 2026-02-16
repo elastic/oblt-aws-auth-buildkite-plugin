@@ -3,31 +3,17 @@
 set -euo pipefail
 
 aws_account_id="${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_AWS_ACCOUNT_ID:-"697149045717"}"
-duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
-
-# Validate AWS account ID: must be exactly 12 digits
-if ! [[ "$aws_account_id" =~ ^[0-9]{12}$ ]]; then
-  echo "Error: Invalid AWS account ID '${aws_account_id}'. Must be a 12-digit number."
-  exit 1
-fi
-
-# Validate duration: must be a positive integer
-if ! [[ "$duration_seconds" =~ ^[0-9]+$ ]] || [ "$duration_seconds" -le 0 ] 2>/dev/null; then
-  echo "Error: Invalid duration '${duration_seconds}'. Must be positive."
-  exit 1
-fi
-
 # The hash is used to ensure that the role name is unique per pipeline
 # The same hash is used to generate the role name in the terraform code in
 # https://github.com/elastic/oblt-infra/blob/main/modules/aws-buildkite-oidc/main.tf#L43
 hash=$(echo -n "$(echo "${BUILDKITE_REPO}" | awk -F'[:.]' '{ printf $3 }')/${BUILDKITE_PIPELINE_SLUG}" | sha256sum | cut -c1-55)
 aws_role_arn="arn:aws:iam::${aws_account_id}:role/bk-${hash}-role"
+duration_seconds=${BUILDKITE_PLUGIN_OBLT_AWS_AUTH_DURATION:-3600}
 
 echo "~~~ :buildkite: Requesting OIDC token from Buildkite"
 oidc_token=$(buildkite-agent oidc request-token --audience sts.amazonaws.com)
-buildkite-agent redactor add "$oidc_token"
 
-echo "~~~ :aws: Assuming role ${aws_role_arn} (duration: ${duration_seconds}s)"
+echo "~~~ :aws: Assuming role ${aws_role_arn}"
 response=$(curl \
   -H "Accept: application/json" \
   "https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity&RoleArn=${aws_role_arn}&RoleSessionName=${BUILDKITE_PIPELINE_SLUG}-${BUILDKITE_BUILD_NUMBER}&DurationSeconds=${duration_seconds}&WebIdentityToken=${oidc_token}&Version=2011-06-15")
@@ -39,26 +25,9 @@ AWS_SESSION_TOKEN=$(echo "$response" | jq -r "${credentials_json_path}.SessionTo
 
 if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
   echo "^^^ +++"
-  error_code=$(echo "$response" | jq -r '.Error.Code // ""')
-  error_message=$(echo "$response" | jq -r '.Error.Message // ""')
-  echo "Error: Failed to assume AWS role"
-  if [ -n "$error_code" ]; then
-    echo "  ${error_code}: ${error_message}"
-  else
-    echo "${response}"
-  fi
-  echo ""
-  echo "Troubleshooting:"
-  echo "  - Verify the role ARN: ${aws_role_arn}"
-  echo "  - Check the OIDC provider configuration"
-  echo "  - Ensure the role trust policy allows this pipeline"
+  echo "Failed to assume AWS role:"
+  echo "${response}"
   exit 1
 fi
 
-buildkite-agent redactor add "$AWS_ACCESS_KEY_ID"
-buildkite-agent redactor add "$AWS_SECRET_ACCESS_KEY"
-buildkite-agent redactor add "$AWS_SESSION_TOKEN"
-
 export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
-
-echo "Successfully authenticated to AWS account ${aws_account_id}"
