@@ -22,5 +22,5 @@ steps:
     command: make e2e-test
 
 notify:
-  - slack: "#observability-ci"
+  - slack: "#observablt-bots
     if: build.branch == "main" && build.state == "failed"
