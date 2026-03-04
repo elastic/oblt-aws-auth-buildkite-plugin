@@ -1,7 +1,7 @@
 services:
   plugin-lint:
-    image: buildkite/plugin-linter:v2.1.0
-    command: ['--id', 'elastic/oblt-aws-auth']
+    image: buildkite/plugin-linter:v3.0.0
+    command: ['--id', 'elastic/oblt-aws-auth', '--path', '/plugin']
     volumes:
       - ".:/plugin:ro"
 
@@ -12,3 +12,26 @@ services:
     volumes:
       - ".:/plugin:ro"
     command: ['bats', 'tests/unit']
+
+  shellcheck:
+    image: koalaman/shellcheck-alpine:v0.11.0
+    entrypoint: ["sh", "-c"]
+    command: >
+      "
+      echo 'running shellcheck' ;
+      (find hooks .buildkite/scripts -type f 2>/dev/null | xargs shellcheck --shell=bash --external-sources --color=always --format=gcc) && echo 'shellcheck passed' || (echo 'shellcheck failed' && exit 1);
+      "
+    working_dir: /plugin
+    volumes:
+      - ".:/plugin:ro"
+
+  e2e-test:
+    image: buildkite/plugin-tester:v4.3.0
+    environment:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+    volumes:
+      - ".:/plugin:ro"
+    working_dir: /plugin
+    command: [".buildkite/scripts/test-e2e.sh"]
