@@ -27,7 +27,7 @@ Every PR must have exactly one `changelog:*` label. When merged to `main`, relea
 
 ### 3. Review the version bump PR
 
-After publishing, the [bump-version workflow](../.github/workflows/bump-version.yml) automatically creates a PR to update the plugin version in README.md. Review and merge it to keep the documentation up to date.
+After publishing, the [bump-readme-version workflow](../.github/workflows/bump-readme=version.yml) automatically creates a PR to update the plugin version in README.md. Review and merge it to keep the documentation up to date.
 
 ## Changelog Labels
 
