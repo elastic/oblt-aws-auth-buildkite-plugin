@@ -1,4 +1,4 @@
-name: bump-version
+name: bump-readme-version
 
 on:
   release:
@@ -10,7 +10,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  bump-version:
+  bump:
     runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v6
