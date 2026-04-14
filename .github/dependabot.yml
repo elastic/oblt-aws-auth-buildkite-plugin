@@ -4,6 +4,8 @@ updates:
   - package-ecosystem: github-actions
     directories:
       - '/'
+    labels:
+      - 'changelog:dependencies'
     schedule:
       interval: 'weekly'
       day: 'sunday'
