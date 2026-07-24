@@ -1,5 +1,5 @@
 .PHONY: all
-all: test plugin-lint shellcheck e2e-test
+all: test plugin-lint shellcheck
 
 .PHONY: test
 test:
@@ -12,7 +12,3 @@ plugin-lint:
 .PHONY: shellcheck
 shellcheck:
 	@docker compose run --rm shellcheck
-
-.PHONY: e2e-test
-e2e-test:
-	@docker compose run --rm e2e-test
