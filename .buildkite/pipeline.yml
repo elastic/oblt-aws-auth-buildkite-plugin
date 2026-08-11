@@ -1,0 +1,17 @@
+agents:
+  provider: gcp
+  image: family/core-ubuntu-2204
+
+steps:
+  - label: ":test_tube: Unit Tests"
+    command: make test
+
+  - label: ":lint-roller: Plugin Lint"
+    command: make plugin-lint
+
+  - label: ":shell: ShellCheck"
+    command: make shellcheck
+
+notify:
+  - slack: "#observablt-bots"
+    if: build.branch == "main" && build.state == "failed"

@@ -3,14 +3,14 @@ services:
     image: buildkite/plugin-linter:v3.0.0
     command: ['--id', 'elastic/oblt-aws-auth', '--path', '/plugin']
     volumes:
-      - ".:/plugin:ro"
+      - ".:/plugin:ro,z"
 
   test:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ".:/plugin:ro"
+      - ".:/plugin:ro,z"
     command: ['bats', 'tests/unit']
 
   shellcheck:
@@ -23,7 +23,7 @@ services:
       "
     working_dir: /plugin
     volumes:
-      - ".:/plugin:ro"
+      - ".:/plugin:ro,z"
 
   e2e-test:
     image: buildkite/plugin-tester:v4.3.0
@@ -32,6 +32,6 @@ services:
       - AWS_SECRET_ACCESS_KEY
       - AWS_SESSION_TOKEN
     volumes:
-      - ".:/plugin:ro"
+      - ".:/plugin:ro,z"
     working_dir: /plugin
     command: [".buildkite/scripts/test-e2e.sh"]

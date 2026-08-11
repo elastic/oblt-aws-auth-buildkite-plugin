@@ -22,3 +22,7 @@ steps:
           aws-account-id: 697149045717
           duration: 3600 # seconds
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local development and testing instructions.
